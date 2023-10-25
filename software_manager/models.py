@@ -66,19 +66,15 @@ class SoftwareImage(NetBoxModel):
         ordering = ["-filename", "-version"]
 
     def save(self, *args, **kwargs) -> None:
-        if not self.image_exists:
-            self.filename = ""
-            self.md5sum_calculated = ""
-            self.md5sum = ""
-            super().save(*args, **kwargs)
-            return
+        if not self.filename:
+            self.filename = self.image.name.rsplit("/", 1)[-1]
 
-        self.filename = self.image.name.rsplit("/", 1)[-1]
+        if not self.md5sum_calculated:
+            md5 = hashlib.md5()
+            for chunk in self.image.chunks():
+                md5.update(chunk)
+            self.md5sum_calculated = md5.hexdigest()
 
-        md5 = hashlib.md5()
-        for chunk in self.image.chunks():
-            md5.update(chunk)
-        self.md5sum_calculated = md5.hexdigest()
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
