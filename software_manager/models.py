@@ -84,6 +84,7 @@ class SoftwareImage(NetBoxModel):
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         if self.image_exists:
             Path(self.image.name).unlink(missing_ok=True)
+            self.image.delete(save=False)
         return super().delete(*args, **kwargs)
 
     def __str__(self) -> str:
