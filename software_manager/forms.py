@@ -3,19 +3,20 @@ from pathlib import Path
 from dcim.models import Device, DeviceType, Manufacturer
 from django import forms
 from django.conf import settings
-from netbox.forms import NetBoxModelFilterSetForm, NetBoxModelForm
+from django.forms import MultipleChoiceField
 from utilities.forms import (
-    BOOLEAN_WITH_BLANK_CHOICES,
     BootstrapMixin,
+)
+from utilities.forms.fields import (
     CommentField,
-    DateTimePicker,
     DynamicModelMultipleChoiceField,
-    MultipleChoiceField,
-    StaticSelect,
     TagFilterField,
 )
+from utilities.forms.widgets import DateTimePicker
 
-from .choices import TaskStatusChoices, TaskTransferMethod, TaskTypeChoices, ImageTypeChoices
+from netbox.forms import NetBoxModelFilterSetForm, NetBoxModelForm
+
+from .choices import TaskStatusChoices, TaskTransferMethod, TaskTypeChoices
 from .models import GoldenImage, ScheduledTask, SoftwareImage
 
 PLUGIN_SETTINGS = settings.PLUGINS_CONFIG.get("software_manager", dict())
@@ -79,12 +80,12 @@ class SoftwareImageEditForm(NetBoxModelForm):
             self.fields["image"].initial = self.instance.image
 
     def clean(self):
-        cleaned_data = super().clean()
-        print(f"{cleaned_data=}")
+        super().clean()
+        print(f"{self.cleaned_data=}")
         print(f"{self.instance=}")
         print(f"{self.instance.pk=}")
-        image = cleaned_data.get("image", None)
-        version = cleaned_data.get("version", None)
+        image = self.cleaned_data.get("image", None)
+        version = self.cleaned_data.get("version", None)
         if not version:
             raise forms.ValidationError(
                 {"version": f"Version is requared"},
@@ -205,7 +206,6 @@ class ScheduledTaskCreateForm(BootstrapMixin, forms.Form):
         required=True,
         label="Job Type",
         initial="",
-        widget=StaticSelect(),
     )
     scheduled_time = forms.DateTimeField(
         label="Scheduled Time",
@@ -225,7 +225,6 @@ class ScheduledTaskCreateForm(BootstrapMixin, forms.Form):
         required=True,
         label="Transfer Method",
         initial=DEFAULT_TRANSFER_METHOD,
-        widget=StaticSelect(),
     )
 
     class Meta:
@@ -249,7 +248,6 @@ class ScheduledTaskFilterForm(NetBoxModelFilterSetForm):
     confirmed = forms.NullBooleanField(
         required=False,
         label="Is Confirmed (ACK)",
-        widget=StaticSelect(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     scheduled_time_after = forms.DateTimeField(
         label="After",
