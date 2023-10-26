@@ -24,7 +24,7 @@ CF_NAME_SW_VERSION = PLUGIN_SETTINGS.get("CF_NAME_SW_VERSION", "")
 DEFAULT_TRANSFER_METHOD = PLUGIN_SETTINGS.get("DEFAULT_TRANSFER_METHOD", TaskTransferMethod.METHOD_FTP)
 IMAGE_FOLDER = PLUGIN_SETTINGS.get("IMAGE_FOLDER", "")
 
-IMAGE_FORMATS = ".bin,.tgz"
+IMAGE_FORMATS = ".bin,.tgz,.tar"
 
 
 class ClearableFileInput(forms.ClearableFileInput):
@@ -35,7 +35,7 @@ class SoftwareImageEditForm(NetBoxModelForm):
     image = forms.FileField(
         required=False,
         label="Image",
-        help_text="Image File, with .bin/.tgz extension",
+        help_text="Image File, with .bin/.tgz/.tar extension",
         widget=ClearableFileInput(attrs={"accept": IMAGE_FORMATS}),
     )
     md5sum = forms.CharField(

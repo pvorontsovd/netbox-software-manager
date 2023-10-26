@@ -25,7 +25,7 @@ UPGRADE_QUEUE = PLUGIN_SETTINGS.get("UPGRADE_QUEUE", "")
 class SoftwareImage(NetBoxModel):
     image = models.FileField(
         upload_to=f"{IMAGE_FOLDER}",
-        validators=[FileExtensionValidator(allowed_extensions=["bin","tgz"])],
+        validators=[FileExtensionValidator(allowed_extensions=["bin", "tgz", "tar"])],
         null=True,
         blank=True,
     )
