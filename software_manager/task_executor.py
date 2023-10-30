@@ -20,6 +20,7 @@ from .task_exceptions import TaskException
 from jnpr.junos import Device as JDevice
 from jnpr.junos.utils.scp import SCP
 from jnpr.junos.utils.fs import FS
+from jnpr.junos.utils.sw import SW
 from jnpr.junos.utils.start_shell import StartShell
 import re
 
@@ -411,7 +412,7 @@ class TaskExecutor(TaskLoggerMixIn):
         
                 self.file_system = "/var/tmp"
                 self.target_image = self.task.device.device_type.golden_image.sw.filename
-                target_path = self.task.device.device_type.golden_image.sw.image.path
+                target_path = self.task.device.device_type.golden_image.sw.image.name
                 self.image_on_device = list(filter(lambda x: x == self.task.device.device_type.golden_image.sw.filename, output.splitlines()))
 
             self.debug(f"Filesystem: {self.file_system}")
@@ -496,6 +497,32 @@ class TaskExecutor(TaskLoggerMixIn):
             self.error(msg)
             self.skip_task(msg, TaskFailReasonChoices.FAIL_UPLOAD)
 
+    def _junos_file_upload(self):
+        try:
+            host = str(self.task.device.primary_ip.address.ip)
+            with JDevice(host=host, user=DEVICE_USERNAME, passwd=DEVICE_PASSWORD) as dev:
+                match self.task.transfer_method:
+                    case TaskTransferMethod.METHOD_SCP:
+                        with SCP(dev, progress=self._scp_progress) as scp:
+                            scp.put(self.task.device.device_type.golden_image.sw.image.path,
+                                    "/var/tmp/" + self.task.device.device_type.golden_image.sw.filename)
+                    case TaskTransferMethod.METHOD_HTTP:
+                        sw = SW(dev)
+                        ok, msg = sw.install(
+                            package=f"{HTTP_SERVER}{self.target_image}",
+                            progress=self._scp_progress,
+                        )
+                        if not ok:
+                            raise Exception(msg)
+                    case _:
+                        msg = "Unknown transfer method"
+                        self.error(msg)
+                        self.skip_task(msg, reason=TaskFailReasonChoices.FAIL_UPLOAD)
+        except Exception as err:
+            msg = "Failed to connect / upload to device - " + str(err)
+            self.warning(msg)
+            self.skip_task(msg, TaskFailReasonChoices.FAIL_UPLOAD)
+
     def _check_md5(self, filename: str, expected_md5: str) -> None:
         if self.task.device.device_type.golden_image.sw.image_type == "junos" or self.task.device.device_type.golden_image.sw.image_type == "junossr":
             dev = JDevice(host=str(self.task.device.primary_ip.address.ip),user=DEVICE_USERNAME,passwd=DEVICE_PASSWORD)
@@ -565,12 +592,6 @@ class TaskExecutor(TaskLoggerMixIn):
                 self.info(f"Image {self.target_image} already exists")
 
             self.info("MD5 verification...")
-            self._check_md5(
-                filename=f"{self.file_system}/{self.target_image}",
-                expected_md5=self.task.device.device_type.golden_image.sw.md5sum,
-            )
-            self.info("File was uploaded and verified")
-            self._close_cli()
         else:
             if self.image_on_device is not None and len(self.image_on_device) == 0:
                 self.info("No image on the device. Need to transfer")
@@ -583,28 +604,18 @@ class TaskExecutor(TaskLoggerMixIn):
                     self.skip_task(msg, TaskFailReasonChoices.FAIL_UPLOAD)
                 else:
                     self.debug("Enough space for uploading, contunue proccessing")
-                    try:
-                        self.info("Beginning JUNOS upload ...") 
-                        dev = JDevice(host=str(self.task.device.primary_ip.address.ip),user=DEVICE_USERNAME,passwd=DEVICE_PASSWORD)
-                        with SCP(dev, progress=self._scp_progress) as scp:
-                            scp.put(self.task.device.device_type.golden_image.sw.image.path, "/var/tmp/" + self.task.device.device_type.golden_image.sw.filename)
-                            self.info(f"Software successfully uploaded")
-                            self._check_md5(
-                                filename=f"/var/tmp/{self.task.device.device_type.golden_image.sw.filename}",
-                                expected_md5=self.task.device.device_type.golden_image.sw.md5sum,
-                            )
-                        dev.close()
-                    except Exception as inst:
-                        msg = f"Failed to connect / upload to device - " + str(inst)
-                        self.warning(msg)
-                        self.skip_task(msg, TaskFailReasonChoices.FAIL_UPLOAD)
-
-
+                    self.info("Beginning JUNOS upload ...")
+                    self._junos_file_upload()
+                    self.info("Software successfully uploaded")
             else:
                 self.info(f"Image {self.target_image} already exists")
 
-
-
+        self._check_md5(
+            filename=f"{self.file_system}/{self.target_image}",
+            expected_md5=self.task.device.device_type.golden_image.sw.md5sum,
+        )
+        self.info("File was uploaded and verified")
+        self._close_cli()
 
     def _compare_sw(self, show_version_output: Response, should_match: bool) -> None:
         if self.task.device is None:
