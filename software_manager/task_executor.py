@@ -126,11 +126,12 @@ class TaskExecutor(TaskLoggerMixIn):
             self.warning(msg)
             return
 
-        if not Path(settings.MEDIA_ROOT, sw.image.name).is_file():
-            msg = "_check_software_image_file_exists - FAIL: Image file does not exist in NetBox media directory"
-            self.warning(msg)
-            self.skip_task(msg, TaskFailReasonChoices.FAIL_CHECK)
-        self.debug("_check_software_image_file_exists - OK: Image file exists in NetBox media directory")
+        if settings.STATICFILES_STORAGE == 'django.contrib.staticfiles.storage.StaticFilesStorage':
+            if not Path(settings.MEDIA_ROOT, sw.image.name).is_file():
+                msg = "_check_software_image_file_exists - FAIL: Image file does not exist in NetBox media directory"
+                self.warning(msg)
+                self.skip_task(msg, TaskFailReasonChoices.FAIL_CHECK)
+            self.debug("_check_software_image_file_exists - OK: Image file exists in NetBox media directory")
 
     def _check_mw_is_active(self) -> None:
         if not all([self.task.scheduled_time, self.task.mw_duration, self.task.start_time]):
