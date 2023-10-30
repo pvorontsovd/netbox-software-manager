@@ -12,6 +12,7 @@ class SoftwareManager(PluginConfig):
     default_settings = {}
     base_url = "software-manager"
     caching_config = {}
+    queues = ["default"]
 
 
 config = SoftwareManager
