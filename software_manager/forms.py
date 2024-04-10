@@ -17,14 +17,15 @@ from utilities.forms.widgets import DateTimePicker
 from netbox.forms import NetBoxModelFilterSetForm, NetBoxModelForm
 
 from .choices import TaskStatusChoices, TaskTransferMethod, TaskTypeChoices
-from .models import GoldenImage, ScheduledTask, SoftwareImage
+from .models import GoldenImage, ScheduledTask, SoftwareImage, ALLOWED_EXTENSIONS
 
 PLUGIN_SETTINGS = settings.PLUGINS_CONFIG.get("software_manager", dict())
 CF_NAME_SW_VERSION = PLUGIN_SETTINGS.get("CF_NAME_SW_VERSION", "")
 DEFAULT_TRANSFER_METHOD = PLUGIN_SETTINGS.get("DEFAULT_TRANSFER_METHOD", TaskTransferMethod.METHOD_FTP)
 IMAGE_FOLDER = PLUGIN_SETTINGS.get("IMAGE_FOLDER", "")
 
-IMAGE_FORMATS = ".bin,.tgz,.tar"
+IMAGE_FORMATS = ",".join([f".{EXTENSION}" for EXTENSION in ALLOWED_EXTENSIONS])
+IMAGE_FORMATS_TIP = "/".join([f".{EXTENSION}" for EXTENSION in ALLOWED_EXTENSIONS])
 
 
 class ClearableFileInput(forms.ClearableFileInput):
@@ -35,7 +36,7 @@ class SoftwareImageEditForm(NetBoxModelForm):
     image = forms.FileField(
         required=False,
         label="Image",
-        help_text="Image File, with .bin/.tgz/.tar extension",
+        help_text=f"Image File, with {IMAGE_FORMATS_TIP} extension",
         widget=ClearableFileInput(attrs={"accept": IMAGE_FORMATS}),
     )
     md5sum = forms.CharField(
