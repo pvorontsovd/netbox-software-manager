@@ -20,12 +20,13 @@ CF_NAME_SW_VERSION = PLUGIN_SETTINGS.get("CF_NAME_SW_VERSION", "")
 FTP_USERNAME = PLUGIN_SETTINGS.get("FTP_USERNAME", "")
 IMAGE_FOLDER = PLUGIN_SETTINGS.get("IMAGE_FOLDER", "")
 UPGRADE_QUEUE = PLUGIN_SETTINGS.get("UPGRADE_QUEUE", "")
+ALLOWED_EXTENSIONS = PLUGIN_SETTINGS.get("ALLOWED_EXTENSIONS", ["bin", "tgz", "tar", "iso"])
 
 
 class SoftwareImage(NetBoxModel):
     image = models.FileField(
         upload_to=f"{IMAGE_FOLDER}",
-        validators=[FileExtensionValidator(allowed_extensions=["bin", "tgz", "tar"])],
+        validators=[FileExtensionValidator(allowed_extensions=ALLOWED_EXTENSIONS)],
         null=True,
         blank=True,
     )
